@@ -1,0 +1,9 @@
+tensorflow==2.16.1
+pandas
+sqlalchemy
+psycopg2-binary
+scikit-learn
+joblib
+matplotlib
+fastapi
+uvicorn

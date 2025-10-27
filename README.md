@@ -1,4 +1,3 @@
-````markdown
 # 🇹🇳 Tunisia Climate Data Pipeline (Spark, Kafka, PostgreSQL, DL/LSTM)
 
 ## 📝 Project Description
@@ -62,7 +61,7 @@ Use Docker Compose to build and start all services (Zookeeper, Kafka, PostgreSQL
 
 ```bash
 docker compose up --build -d
-````
+```
 
 ### 4. Initial Historical Data Load
 
@@ -101,7 +100,7 @@ You can check the logs of the Spark Streaming container to confirm data flow:
 ```bash
 docker logs -f spark-master
 ```
-Also you can check with SELECT COUNT(*) FROM TABLE_NAME; that the count is increasing.
+Also you can check with ```bash SELECT COUNT(*)  FROM TABLE_NAME; ``` that the count is increasing.
 
 ### 6. Shut Down
 

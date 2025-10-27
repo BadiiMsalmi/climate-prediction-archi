@@ -46,4 +46,4 @@ db_properties = {
 }
 
 df_cleaned.write.jdbc(url=jdbc_url, table=table_name, mode="append", properties=db_properties)
-print("✅ Historical weather data successfully loaded into PostgreSQL.")
+print("Historical weather data successfully loaded into PostgreSQL.")

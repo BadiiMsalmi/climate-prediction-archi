@@ -8,6 +8,7 @@ yarn-error.log*
 dist/
 build/
 out/
+postgres_data/
 
 # OS files
 .DS_Store
