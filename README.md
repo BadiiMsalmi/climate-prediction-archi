@@ -1,4 +1,4 @@
-# 🇹🇳 Tunisia Climate Data Pipeline (Spark, Kafka, PostgreSQL, DL/LSTM)
+# Tunisia Climate Data Pipeline (Spark, Kafka, PostgreSQL, DL/LSTM)
 
 ## 📝 Project Description
 
