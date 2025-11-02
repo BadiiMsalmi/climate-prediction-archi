@@ -1,112 +1,267 @@
-# Tunisia Climate Data Pipeline (Spark, Kafka, PostgreSQL, DL/LSTM)
+# 🌤️ Tunisia Climate Data Pipeline (Spark, Kafka, PostgreSQL, DL/LSTM)
 
-## 📝 Project Description
+## 🧠 Overview
 
-This project establishes a complete data engineering pipeline for ingesting, processing, and storing Tunisian climate data, ultimately feeding a Deep Learning model for temperature prediction.
+This project builds an **end-to-end climate data pipeline** for **real-time and historical weather processing** and **temperature forecasting** in **Tunisia**.
+It integrates **data engineering** and **AI** components into one Dockerized architecture.
 
-The pipeline comprises the following key components, all running in Docker containers:
+The system includes:
 
-1. **Historical Data Load (Spark):** Loads 5 years (2020-2025) of historical climate data from a JSON file into the PostgreSQL database.
-2. **Real-Time Producer (Python/Kafka):** A Python service that hits the Open-Meteo API every hour to get real-time temperature data for Tunisia. It produces these data points to a Kafka topic.
-3. **Spark Streaming Processor:** Consumes the real-time data from Kafka, performs cleaning and validation, and persists the clean records to the PostgreSQL database, appending to the historical data.
-4. **PostgreSQL Database:** Acts as the unified data store for both historical and real-time climate observations.
-5. **Deep Learning (LSTM):** The final consumer that will use the combined data for training a time-series prediction model (LSTM) to forecast future temperatures.
+1. **Historical Data Loader (Spark):** Loads multi-year historical weather data into PostgreSQL.
+2. **Real-Time Data Producer (Python + Kafka):** Periodically fetches live weather metrics from Open-Meteo API and streams them to Kafka.
+3. **Stream Processor (Spark Structured Streaming):** Consumes live Kafka data, cleans it, validates it, and stores it in PostgreSQL.
+4. **PostgreSQL Database:** Central storage for both historical and real-time datasets.
+5. **Model Trainer (TensorFlow):** Periodically retrains an LSTM model on stored data and saves updated models.
+6. **Model API (Flask):** Provides REST endpoints to serve **live temperature predictions** using the most recently trained model.
 
-## 🚀 How to Use
+Everything runs in isolated **Docker containers** for full reproducibility.
 
-Follow these steps to set up and run the entire containerized pipeline:
+---
 
-### 1. Prerequisites
+## 🏗️ Architecture
 
-You must have the following installed on your machine:
+```
+            +------------------+
+            |  Open-Meteo API  |
+            +--------+---------+
+                     |
+                     ▼
+             +---------------+
+             |  Producer.py   |
+             | (Python + API) |
+             +-------+--------+
+                     |
+                     ▼
+          +--------------------+
+          |   Kafka (Broker)   |
+          +---------+----------+
+                    |
+                    ▼
+        +---------------------------+
+        |  Spark Stream Processor   |
+        | (Clean + Transform)       |
+        +-------------+-------------+
+                      |
+                      ▼
+           +-----------------------+
+           |   PostgreSQL Database |
+           +-----------+-----------+
+                       |
+             ┌─────────┴─────────┐
+             ▼                   ▼
+  +------------------+  +-------------------+
+  |  Model Trainer   |  |   Model API       |
+  | (LSTM, TF/Keras) |  | (Flask, REST)     |
+  +------------------+  +-------------------+
+             |
+             ▼
+      Saved Models (/app/saved_models)
+```
 
-  * **Docker**
-  * **Docker Compose** (or Docker Desktop)
+---
 
-### 2. Setup and Configuration
+## ⚙️ Components
 
-1. **Clone the Repository:**
+### 🧩 **1. Producer Service**
 
-    ```bash
-    git clone [Your-Repo-URL]
-    cd [your-project-directory]
-    ```
+* **Path:** `/producer/producer.py`
+* Fetches data from [Open-Meteo API](https://open-meteo.com/) every hour.
+* Sends messages like:
 
-2. **Create and Configure `.env`:**
-    Since the `.env` file is intentionally omitted from the repository for security, you must create it manually in the root directory. This file contains private secrets (passwords and API configurations).
+  ```json
+  {
+    "timestamp": "2025-11-02T14:00",
+    "temperature": 24.6,
+    "humidity": 55.0,
+    "latitude": 36.81,
+    "longitude": 10.19
+  }
+  ```
+* Sends them to Kafka topic `weather_data`.
 
-    Create a file named **`.env`** and populate it with your environment variables (using a strong password):
+---
 
-    ```ini
-    # .env (DO NOT COMMIT THIS FILE!)
+### ⚡ **2. Kafka + Zookeeper**
 
-    # PostgreSQL Credentials
-    POSTGRES_USER=badii
-    POSTGRES_PASSWORD=your_strong_unique_password # <--- CHANGE ME
-    POSTGRES_DB=temperature_db
+* Manages message queues for real-time data.
+* **Service names:** `kafka`, `zookeeper`
+* Internal network communication through `weather_data_net`.
+* Exposed on port **9092**.
 
-    # Kafka/Network Configuration
-    ZOOKEEPER_CLIENT_PORT=2181
-    KAFKA_BROKER_ID=1
-    KAFKA_TOPIC=weather_data
-    KAFKA_PORT=9092
+---
 
-    # API Configuration (Open-Meteo URL)
-    API_URL=https://api.open-meteo.com/v1/forecast?latitude=36.801403&longitude=10.170828&current=temperature_2m,relative_humidity_2m
-    ```
+### 🔥 **3. Spark Streaming Processor**
 
-### 3. Running the Pipeline
+* **Path:** `/spark/stream_processor.py`
+* Reads from Kafka topic (`weather_data`).
+* Cleans and validates incoming JSON data.
+* Writes each micro-batch to PostgreSQL.
+* Example cleaning rules:
 
-Use Docker Compose to build and start all services (Zookeeper, Kafka, PostgreSQL, Spark, and the Producer):
+  * Drop rows with missing temperature/humidity.
+  * Accept temperature in [-50, 60] °C and humidity [0, 100]%.
+
+---
+
+### 🧱 **4. PostgreSQL Database**
+
+* **Service name:** `postgres`
+* Stores:
+
+  * Historical data (`temperature_hourly`)
+  * Model training data
+  * Live predictions
+
+---
+
+### 🧠 **5. Model Trainer**
+
+* **Path:** `/model/train_model.py` (check repo)
+* Reads processed data from PostgreSQL.
+* Trains an **LSTM** model to predict next-hour temperature.
+* Saves:
+
+  * `model.h5` (trained model)
+  * `scaler_X.pkl` and `scaler_y.pkl` (data scalers)
+  * `current_model.json` (pointer to latest model)
+* Output directory: `/model/saved_models/`
+
+---
+
+### 🔮 **6. Model API**
+
+* **Path:** `/model_api/model_api.py`
+* Flask-based REST API serving predictions from latest LSTM model.
+* Reads last 24 hours of weather data from PostgreSQL.
+* Transforms them into model input format.
+* Returns JSON:
+
+  ```json
+  {
+    "predicted_temperature_next_hour": 25.72
+  }
+  ```
+* Endpoint:
+
+  ```
+  GET http://localhost:8000/predict
+  ```
+* Automatically logs predictions in the `predictions` table.
+
+---
+
+## ⚡ Usage
+
+### 1️⃣ **Setup**
+
+Clone the repo:
+
+```bash
+git clone https://github.com/BadiiMsalmi/climate-prediction-archi.git
+cd climate-prediction-archi
+```
+
+Create your `.env` file in the root directory:
+
+```ini
+# PostgreSQL
+POSTGRES_USER=badii
+POSTGRES_PASSWORD=
+POSTGRES_DB=temperature_db
+
+# Kafka
+ZOOKEEPER_CLIENT_PORT=2181
+KAFKA_BROKER_ID=1
+KAFKA_TOPIC=weather_data
+KAFKA_PORT=9092
+
+# API
+API_URL=https://api.open-meteo.com/v1/forecast?latitude=36.801403&longitude=10.170828&current=temperature_2m,relative_humidity_2m
+```
+
+---
+
+### 2️⃣ **Run All Containers**
 
 ```bash
 docker compose up --build -d
 ```
 
-### 4. Initial Historical Data Load
+This starts:
 
-Once the containers are running, you must run your script to load the historical JSON data into the PostgreSQL database:
+* Zookeeper
+* Kafka
+* PostgreSQL
+* Spark Master & Worker
+* Producer
+* Model Trainer
+* Model API (Flask)
 
-* **Note:** Assuming your historical script is run from inside the `spark-master` container.
+---
 
-  ```bash
-  # Connect to the Spark Master container
-  docker exec -it spark-master /bin/bash
+### 3️⃣ **Load Historical Data**
 
-  # Inside the container, run your historical load script (replace 'load_historical.py' with your script name)
-  /opt/spark/bin/spark-submit /app/load_historical.py
+Enter the Spark Master container:
 
-  # Exit the container
-  exit
-  ```
-
-### 5. Verify the Stream
-
-Start with : 
 ```bash
 docker exec -it spark-master /bin/bash
 ```
 
-then run this command : 
+Run:
+
+```bash
+/opt/spark/bin/spark-submit /app/load_historical.py
+```
+
+---
+
+### 4️⃣ **Start Stream Processing**
+
+Inside the same container:
+
 ```bash
 /opt/spark/bin/spark-submit /opt/spark/app/stream_processor.py
 ```
 
-* **Real-Time Data:** The `producer` container is now fetching new temperature data every hour and sending it to the `kafka` broker.
-* **Data Processing:** The `spark-master` container is running the stream processor, which continuously reads from Kafka and writes clean data to the `postgres` database.
-
-You can check the logs of the Spark Streaming container to confirm data flow:
+You’ll see micro-batches appearing in logs:
 
 ```bash
-docker logs -f spark-master
+=== Batch 1 ===
++-------------------+-----------+---------+-----------+-----------+
+|timestamp          |temperature|humidity |latitude   |longitude  |
++-------------------+-----------+---------+-----------+-----------+
+|2025-11-02 14:30:00|25.7       |40.0     |36.8125    |10.1875    |
++-------------------+-----------+---------+-----------+-----------+
 ```
-Also you can check with ```bash SELECT COUNT(*)  FROM TABLE_NAME; ``` that the count is increasing.
 
-### 6. Shut Down
+---
 
-To stop and remove all containers, networks, and volumes (excluding named volumes):
+### 5️⃣ **Access the Model API**
+
+Predict next-hour temperature:
+
+```bash
+curl http://localhost:8000/predict
+```
+
+Response:
+
+```json
+{"predicted_temperature_next_hour": 25.72}
+```
+
+---
+
+### 6️⃣ **Shut Down**
+
+Stop and clean up all services:
 
 ```bash
 docker compose down
 ```
+
+---
+## 📈 Future Improvements
+
+✅ Add Grafana dashboard for temperature trends
 
