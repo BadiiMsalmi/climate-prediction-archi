@@ -8,7 +8,7 @@ spark.sparkContext.setLogLevel("WARN")
 file_path = "tunisia_5y.json"
 df = spark.read.option("multiline", "true").json(file_path)
 
-# Extract static values (since there’s only one JSON object)
+# Extract static values
 latitude = df.select("latitude").first()[0]
 longitude = df.select("longitude").first()[0]
 

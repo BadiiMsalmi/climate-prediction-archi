@@ -21,8 +21,8 @@ PGPASS = os.getenv("PGPASS", "airpass")
 PGHOST = os.getenv("PGHOST", "postgres")
 PGPORT = os.getenv("PGPORT", "5432")
 PGDB   = os.getenv("PGDB", "air_quality")
-MODEL_DIR = os.getenv("MODEL_DIR", "/app/saved_models")  # volume-mount this
-HISTORY_HOURS = int(os.getenv("HISTORY_HOURS", "24*365*5"))  # use all by default
+MODEL_DIR = os.getenv("MODEL_DIR", "/app/saved_models")  
+HISTORY_HOURS = int(os.getenv("HISTORY_HOURS", "24*365*5"))  
 INPUT_STEPS = int(os.getenv("INPUT_STEPS", "24"))
 HORIZON = int(os.getenv("HORIZON", "1"))
 
@@ -71,7 +71,6 @@ def save_model_atomic(model, scaler_X, scaler_y, model_dir=MODEL_DIR):
     model.save(model_path)
     joblib.dump(scaler_X, os.path.join(target, "scaler_X.pkl"))
     joblib.dump(scaler_y, os.path.join(target, "scaler_y.pkl"))
-    # update pointer
     pointer = {"path": target, "saved_at": ts}
     with open(os.path.join(model_dir, "current_model.json"), "w") as f:
         json.dump(pointer, f)
@@ -96,8 +95,7 @@ def evaluate_and_log(y_true, y_pred, save_path):
 
 def main():
     print("Loading data...")
-    # Option A: use all data (safer). Option B: use recent window for speed (set recent_hours)
-    data, idx = load_data(recent_hours=None)  # change to e.g. 24*30 for last 30 days
+    data, idx = load_data(recent_hours=None)  
     n = len(data)
     if n < (INPUT_STEPS + HORIZON + 10):
         raise ValueError("Not enough data to make windows. Need more rows.")
@@ -105,7 +103,7 @@ def main():
     train_df = data.iloc[:train_size]
     val_df = data.iloc[train_size:]
 
-    # Fit scalers on train set (we will overwrite scalers each retrain)
+    # Fit scalers on train set 
     scaler_X = StandardScaler().fit(train_df)
     scaler_y = StandardScaler().fit(train_df[['temperature']])
 
@@ -125,7 +123,6 @@ def main():
             existing_model_path = os.path.join(pointer["path"], "model.h5")
             print("Loading existing model for fine-tuning:", existing_model_path)
             model = load_model(existing_model_path)
-            # lower lr for fine-tune
             model.compile(optimizer=Adam(1e-4), loss='mse', metrics=['mae'])
         except Exception as e:
             print("Could not load existing model, building new. Error:", e)
@@ -141,7 +138,7 @@ def main():
         ModelCheckpoint(tmp_checkpoint, save_best_only=True)
     ]
 
-    # Fine-tune: few epochs, small lr
+    # Fine-tune
     EPOCHS = 5
     BATCH = 64
     print("Starting training...")

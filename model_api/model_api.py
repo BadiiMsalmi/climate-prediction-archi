@@ -1,6 +1,5 @@
 # model_api.py
 import os
-import time
 import json
 import joblib
 import numpy as np
@@ -32,7 +31,7 @@ def load_current():
     model_path = os.path.join(pointer["path"], "model.h5")
     if _cached["pointer_path"] != pointer["path"]:
         print("Loading new model from", pointer["path"])
-        _cached["model"] = load_model(model_path)
+        _cached["model"] = load_model(model_path, compile=False)
         _cached["scaler_X"] = joblib.load(os.path.join(pointer["path"], "scaler_X.pkl"))
         _cached["scaler_y"] = joblib.load(os.path.join(pointer["path"], "scaler_y.pkl"))
         _cached["pointer_path"] = pointer["path"]

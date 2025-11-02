@@ -1,3 +1,4 @@
+#stream_processor.py
 import os
 from pyspark.sql import SparkSession
 from pyspark.sql.functions import from_json, col, to_timestamp
@@ -14,9 +15,9 @@ spark.sparkContext.setLogLevel("WARN")
 
 KAFKA_BROKER = os.getenv("KAFKA_BROKER", "kafka:9092")
 TOPIC = os.getenv("KAFKA_TOPIC", "default_topic")
-PG_HOST = "postgres" # The service name
-PG_PORT = "5432" # The standard port
-PG_DB = os.getenv("POSTGRES_DB", "temperature_db") # Use the DB name
+PG_HOST = "postgres" 
+PG_PORT = "5432" 
+PG_DB = os.getenv("POSTGRES_DB", "temperature_db")
 
 jdbc_url = f"jdbc:postgresql://{PG_HOST}:{PG_PORT}/{PG_DB}"
 PG_USER = os.getenv("POSTGRES_USER", "default_user")
