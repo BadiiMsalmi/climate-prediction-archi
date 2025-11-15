@@ -7,6 +7,8 @@ import pandas as pd
 from flask import Flask, jsonify
 from tensorflow.keras.models import load_model
 from sqlalchemy import create_engine
+from flask_cors import CORS
+
 
 PGUSER = os.getenv("PGUSER", "airuser")
 PGPASS = os.getenv("PGPASS", "airpass")
@@ -18,6 +20,7 @@ MODEL_DIR = os.getenv("MODEL_DIR", "/app/saved_models")
 engine = create_engine(f"postgresql://{PGUSER}:{PGPASS}@{PGHOST}:{PGPORT}/{PGDB}")
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})
 
 # in-memory cache
 _cached = {"pointer_path": None, "model": None, "scaler_X": None, "scaler_y": None}
@@ -66,6 +69,15 @@ def predict_next_hour():
         print("Could not write prediction to DB:", e)
 
     return jsonify({"predicted_temperature_next_hour": round(float(pred), 2)})
+@app.route("/predictions", methods=["GET"])
+def get_previous_predictions():
+    try:
+        df = pd.read_sql("SELECT * FROM predictions ORDER BY pred_ts DESC LIMIT 100", engine)
+        df['pred_ts'] = df['pred_ts'].astype(str)
+        return jsonify(df.to_dict(orient="records"))
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 
 if __name__ == "__main__":
     app.run(host="0.0.0.0", port=8000)

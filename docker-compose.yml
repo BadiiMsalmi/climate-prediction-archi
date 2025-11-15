@@ -133,6 +133,10 @@ services:
     networks:
       - weather_data_net
 
+  frontend:
+    build: ./frontend
+    ports:
+      - "3000:80"
 
 networks:
   weather_data_net:
