@@ -38,4 +38,4 @@ while True:
     except Exception as e:
         print(f"Error fetching data: {e}")
 
-    time.sleep(3600)
+    time.sleep(960)

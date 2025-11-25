@@ -42,7 +42,6 @@ def load_current():
 
 @app.route("/predict", methods=["GET"])
 def predict_next_hour():
-    # load last INPUT_STEPS hours from DB
     INPUT_STEPS = int(os.getenv("INPUT_STEPS", "24"))
     df = pd.read_sql("SELECT timestamp, temperature, humidity FROM temperature_hourly ORDER BY timestamp DESC LIMIT {}".format(INPUT_STEPS), engine, parse_dates=['timestamp'])
     if df.empty or len(df) < INPUT_STEPS:
@@ -58,7 +57,6 @@ def predict_next_hour():
     pred_s = model.predict(X_in)
     pred = scaler_y.inverse_transform(pred_s)[0][0]
 
-    # optional: save prediction to DB table predictions (timestamp, predicted, actual=NULL initially)
     try:
         dfp = pd.DataFrame([{
             "pred_ts": pd.Timestamp.utcnow(),

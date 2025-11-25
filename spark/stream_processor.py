@@ -23,6 +23,8 @@ jdbc_url = f"jdbc:postgresql://{PG_HOST}:{PG_PORT}/{PG_DB}"
 PG_USER = os.getenv("POSTGRES_USER", "default_user")
 PG_PASSWORD = os.getenv("POSTGRES_PASSWORD", "default_password")
 
+format_string = "%Y-%m-%d %H:%M:%S"
+
 schema = StructType([
     StructField("timestamp", StringType()),
     StructField("temperature", DoubleType()),
@@ -52,7 +54,7 @@ clean_df = (
         (col("humidity").isNotNull()) &
         (col("latitude").isNotNull()) &
         (col("longitude").isNotNull()) &
-        (col("timestamp").isNotNull())
+        (col("timestamp").isNotNull()) 
     )
     .filter(
         (col("temperature") >= -50) & (col("temperature") <= 60) &

@@ -13,9 +13,8 @@ from tensorflow.keras.callbacks import EarlyStopping, ModelCheckpoint
 from sklearn.preprocessing import StandardScaler
 from sklearn.metrics import mean_absolute_error, mean_squared_error
 
-# -------------------
+
 # Config 
-# -------------------
 PGUSER = os.getenv("PGUSER", "airuser")
 PGPASS = os.getenv("PGPASS", "airpass")
 PGHOST = os.getenv("PGHOST", "postgres")
@@ -103,7 +102,6 @@ def main():
     train_df = data.iloc[:train_size]
     val_df = data.iloc[train_size:]
 
-    # Fit scalers on train set 
     scaler_X = StandardScaler().fit(train_df)
     scaler_y = StandardScaler().fit(train_df[['temperature']])
 

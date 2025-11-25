@@ -15,7 +15,7 @@ import matplotlib
 matplotlib.use("Agg")
 import matplotlib.pyplot as plt
 
-# -------- Config (env defaults) --------
+# -------- Config --------
 PGUSER = os.getenv("PGUSER", "airuser")
 PGPASS = os.getenv("PGPASS", "airpass")
 PGHOST = os.getenv("PGHOST", "postgres")
@@ -43,9 +43,9 @@ df = df.set_index('timestamp').resample('H').mean().ffill().bfill()
 df['hour'] = df.index.hour
 df['dow'] = df.index.dayofweek
 data = df[['temperature', 'humidity', 'hour', 'dow']].astype('float32')
-print(f"✅ Data shape after preprocessing: {data.shape}")
+print(f" Data shape after preprocessing: {data.shape}")
 
-# -------- Split & scale --------
+# -------- Split and scale --------
 n = len(data)
 train_size = int(n * 0.8)
 train_df = data.iloc[:train_size]
@@ -70,7 +70,7 @@ X_train, y_train = make_windows(X_train_s, INPUT_STEPS, HORIZON)
 X_val, y_val = make_windows(X_val_s, INPUT_STEPS, HORIZON)
 print(f"Windowed training data shape: X_train={X_train.shape}, y_train={y_train.shape}")
 
-# -------- Build model (same as yours) --------
+# -------- Build model --------
 model = Sequential([
     LSTM(64, input_shape=(INPUT_STEPS, X_train.shape[2])),
     Dropout(0.2),
@@ -80,7 +80,7 @@ model = Sequential([
 model.compile(optimizer='adam', loss='mse', metrics=['mae'])
 print(model.summary())
 
-# -------- Callbacks & Train --------
+# -------- Callbacks and Train --------
 tmp_checkpoint = os.path.join(MODEL_DIR, "tmp_best.h5")
 callbacks = [
     tf.keras.callbacks.EarlyStopping(patience=5, restore_best_weights=True),
@@ -97,7 +97,7 @@ history = model.fit(
     verbose=1
 )
 
-# -------- Eval & plot --------
+# -------- Eval and plot --------
 print("Evaluating model...")
 y_pred_s = model.predict(X_val)
 y_pred = scaler_y.inverse_transform(y_pred_s)
@@ -130,7 +130,7 @@ pointer = {"path": target, "saved_at": ts}
 with open(os.path.join(MODEL_DIR, "current_model.json"), "w") as f:
     json.dump(pointer, f)
 
-# log metrics to DB (optional)
+# log metrics to DB 
 try:
     dfm = pd.DataFrame([{
         "saved_at": datetime.utcnow(),

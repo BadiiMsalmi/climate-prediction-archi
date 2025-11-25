@@ -30,4 +30,5 @@ ENV PGDB=temperature_db
 
 RUN mkdir -p /app/saved_models
 
-CMD ["python", "initial_train.py"]
+CMD ["tail", "-f", "/dev/null"]
+

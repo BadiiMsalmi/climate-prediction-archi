@@ -16,7 +16,7 @@ RUN wget -P /opt/spark/jars \
   wget -P /opt/spark/jars \
   https://repo1.maven.org/maven2/org/apache/kafka/kafka-clients/3.6.0/kafka-clients-3.6.0.jar
 
-# commons-pool2 (required by kafka connector)
+# commons-pool2
 RUN wget -P /opt/spark/jars https://repo1.maven.org/maven2/org/apache/commons/commons-pool2/2.11.1/commons-pool2-2.11.1.jar
 
 COPY stream_processor.py /opt/spark/app/
